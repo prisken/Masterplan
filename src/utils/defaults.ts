@@ -230,6 +230,9 @@ export function emptyDailyEntry(date?: string): DailyEntry {
     id: `daily-${d}`,
     date: d,
     linkedTaskIds: [],
+    dailyWorkLogNote: '',
+    dailyTaskNotes: [],
+    dailyTaskIntent: [],
     todayTop3Tasks: '',
     oneRevenueTask: '',
     oneAuthorityTask: '',
@@ -258,6 +261,8 @@ export function emptyWeeklyReview(): WeeklyReview {
     stopDelegateDelay: '',
     top5ActionsNextWeek: '',
     scoreboard: { ...DEFAULT_WEEKLY_SCOREBOARD },
+    nextWeekTaskIds: [],
+    weeklyTaskNotes: [],
   };
 }
 
@@ -278,6 +283,8 @@ export function emptyMonthlyReview(): MonthlyReview {
     projectDeservesMoreFocus: '',
     projectShouldBeSimplified: '',
     nextMonthTop10Actions: '',
+    nextMonthTaskIds: [],
+    monthlyTaskNotes: [],
   };
 }
 

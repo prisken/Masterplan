@@ -5,7 +5,7 @@ import { ADVISOR_GROWTH_PROJECT_ID } from '../types';
 import { emptyTask } from '../utils/defaults';
 
 describe('mergeAdvisorTasks', () => {
-  it('does not inject Advisor Growth seed tasks', () => {
+  it('does not inject Advisor Growth seed tasks when seed list is empty', () => {
     const other: Task = {
       ...emptyTask('custom-project'),
       id: 'custom-1',
@@ -16,18 +16,17 @@ describe('mergeAdvisorTasks', () => {
     expect(merged.find((t) => t.id === 'custom-1')).toBeTruthy();
   });
 
-  it('drops stored Advisor Growth tasks on merge', () => {
+  it('keeps tasks on Advisor Growth project (user tasks persist on load)', () => {
     const agc: Task = {
       ...emptyTask(ADVISOR_GROWTH_PROJECT_ID),
-      id: 'agc-stale',
-      title: 'Old AGC task',
-      module: 'PA/MDRT System Build',
+      id: 'agc-user-task',
+      title: 'User AGC task',
     };
     const merged = mergeAdvisorTasks([agc]);
-    expect(merged.some((t) => t.id === 'agc-stale')).toBe(false);
+    expect(merged.some((t) => t.id === 'agc-user-task')).toBe(true);
   });
 
-  it('keeps non–Advisor Growth tasks when mixing with AGC', () => {
+  it('keeps both AGC and non-AGC tasks when mixed', () => {
     const other: Task = {
       ...emptyTask('x'),
       id: 'keep-me',
@@ -35,10 +34,10 @@ describe('mergeAdvisorTasks', () => {
     };
     const agc: Task = {
       ...emptyTask(ADVISOR_GROWTH_PROJECT_ID),
-      id: 'drop-me',
-      title: 'Drop',
+      id: 'agc-me',
+      title: 'AGC',
     };
     const merged = mergeAdvisorTasks([other, agc]);
-    expect(merged.map((t) => t.id).sort()).toEqual(['keep-me']);
+    expect(merged.map((t) => t.id).sort()).toEqual(['agc-me', 'keep-me']);
   });
 });

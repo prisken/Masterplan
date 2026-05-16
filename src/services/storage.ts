@@ -8,6 +8,8 @@ import {
   mergeAdvisorProject,
   mergeAdvisorTasks,
   migrateDailyEntries,
+  migrateMonthlyReview,
+  migrateWeeklyReview,
 } from './dataMigrations';
 
 /** Ensures Papers 1–9 exist; preserves saved rows by `paper`; keeps custom papers not in the seed list. */
@@ -87,8 +89,12 @@ function normalizeData(parsed: Partial<AppData>): AppData {
     dailyEntries: parsed.dailyEntries?.length
       ? migrateDailyEntries(parsed.dailyEntries)
       : [],
-    weeklyReviews: parsed.weeklyReviews ?? [],
-    monthlyReviews: parsed.monthlyReviews ?? [],
+    weeklyReviews: Array.isArray(parsed.weeklyReviews)
+      ? parsed.weeklyReviews.map((r) => migrateWeeklyReview(r))
+      : [],
+    monthlyReviews: Array.isArray(parsed.monthlyReviews)
+      ? parsed.monthlyReviews.map((r) => migrateMonthlyReview(r))
+      : [],
     digitalAssets: parsed.digitalAssets ?? [],
     aiPrompts: parsed.aiPrompts?.length ? parsed.aiPrompts : defaults.aiPrompts,
   };

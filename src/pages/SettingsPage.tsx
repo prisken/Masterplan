@@ -10,6 +10,7 @@ import {
   importDataJson,
   resetToDefault,
 } from '../services/storage';
+import { applyPortfolioSixSeed, type PortfolioSixSeedReport } from '../utils/portfolioSixSeed';
 import { APP_VERSION, STORAGE_KEY } from '../types';
 
 export function SettingsPage() {
@@ -17,6 +18,20 @@ export function SettingsPage() {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [seedSixOpen, setSeedSixOpen] = useState(false);
+
+  const handleSeedSixPack = () => {
+    let report!: PortfolioSixSeedReport;
+    updateData((prev) => {
+      const r = applyPortfolioSixSeed(prev);
+      report = r.report;
+      return r.next;
+    });
+    toast(
+      `Six-pack: +${report.tasksAdded} task(s), skipped ${report.tasksSkippedExistingId + report.tasksSkippedDuplicateTitle}. Projects +${report.projectsAdded} new / ${report.projectsUpdated} updated.`
+    );
+    setSeedSixOpen(false);
+  };
 
   const handleExport = () => {
     const json = exportDataJson(data);
@@ -105,6 +120,23 @@ export function SettingsPage() {
       </Card>
 
       <Card className="mb-6 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-900">Portfolio six-pack (projects + tasks)</h2>
+        <p className="text-sm text-slate-500">
+          Adds or updates the six canonical projects (Profit Pulse Ally, Investment News Channel, Mama
+          Supreme, HKSI Papers, Eternal Moments, Advisor Growth Center) and appends any missing starter
+          tasks. Existing tasks with the same stable id or same project + title are skipped. Export a
+          backup first if unsure.
+        </p>
+        <button
+          type="button"
+          onClick={() => setSeedSixOpen(true)}
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Merge six-project starter pack
+        </button>
+      </Card>
+
+      <Card className="mb-6 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900">Backup & restore</h2>
         <p className="text-sm text-slate-500">
           Export all projects, tasks, contacts, content, finance, reviews, and more as a
@@ -149,6 +181,16 @@ export function SettingsPage() {
           Reset to default data
         </button>
       </Card>
+
+      <ConfirmDialog
+        open={seedSixOpen}
+        title="Merge six-project starter pack?"
+        message="This updates the six canonical projects (goals, engines) and adds any missing starter tasks. It will not remove existing tasks. Export a backup first if you want a rollback point."
+        confirmLabel="Merge pack"
+        danger={false}
+        onConfirm={handleSeedSixPack}
+        onCancel={() => setSeedSixOpen(false)}
+      />
 
       <ConfirmDialog
         open={resetOpen}

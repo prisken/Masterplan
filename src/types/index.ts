@@ -410,11 +410,37 @@ export interface WrongAnswer {
 }
 
 // ——— Today ———
+export type DailyTaskIntentKind = 'aim_today' | 'optional' | 'blocked' | 'carry_forward';
+
+/** Per-task notes for a single calendar day (not the permanent Task.notes field). */
+export interface DailyTaskNote {
+  taskId: string;
+  note?: string;
+  progressNote?: string;
+  /** What I did today */
+  whatDidToday?: string;
+  outcome?: string;
+  blocker?: string;
+  nextStep?: string;
+  timeSpentMinutes?: number;
+}
+
+export interface DailyTaskIntent {
+  taskId: string;
+  intent: DailyTaskIntentKind;
+}
+
 export interface DailyEntry {
   id: string;
   date: string;
   /** Master Task ids linked to this day (Top 3 / focus list). */
   linkedTaskIds: string[];
+  /** Free-form journal for the whole day (separate from task notes). */
+  dailyWorkLogNote?: string;
+  /** Day-scoped work log fields per linked task. */
+  dailyTaskNotes?: DailyTaskNote[];
+  /** Planning hint: aim vs optional vs blocked vs carried in. */
+  dailyTaskIntent?: DailyTaskIntent[];
   todayTop3Tasks: string;
   oneRevenueTask: string;
   oneAuthorityTask: string;
@@ -467,6 +493,9 @@ export interface WeeklyReview {
   stopDelegateDelay: string;
   top5ActionsNextWeek: string;
   scoreboard: WeeklyScoreboard;
+  /** Focus tasks chosen for the upcoming week. */
+  nextWeekTaskIds?: string[];
+  weeklyTaskNotes?: { taskId: string; note: string }[];
 }
 
 // ——— Monthly Review ———
@@ -486,6 +515,8 @@ export interface MonthlyReview {
   projectDeservesMoreFocus: string;
   projectShouldBeSimplified: string;
   nextMonthTop10Actions: string;
+  nextMonthTaskIds?: string[];
+  monthlyTaskNotes?: { taskId: string; note: string }[];
 }
 
 // ——— Digital Asset ———
@@ -569,7 +600,7 @@ export interface AppData {
 }
 
 export const STORAGE_KEY = 'master-portfolio-command-center';
-export const DATA_VERSION = 10;
+export const DATA_VERSION = 11;
 
 /** Fixed reference date for pacing calculations (15 May 2026) */
 export const REFERENCE_DATE = '2026-05-15';
