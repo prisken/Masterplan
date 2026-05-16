@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { navItems } from '../../config/navigation';
+import { useAuth } from '../../context/AuthContext';
 import { APP_VERSION } from '../../types';
 import { cn } from '../../utils/cn';
 
@@ -9,6 +10,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onNavigate, mobile }: SidebarProps) {
+  const auth = useAuth();
+
   return (
     <aside
       className={cn(
@@ -66,6 +69,18 @@ export function Sidebar({ onNavigate, mobile }: SidebarProps) {
           ))}
         </ul>
       </nav>
+
+      {auth.enabled && auth.status === 'authenticated' && (
+        <div className="border-t border-border px-3 py-4">
+          <button
+            type="button"
+            onClick={() => void auth.logout()}
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

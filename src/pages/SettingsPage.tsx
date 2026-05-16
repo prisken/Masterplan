@@ -1,24 +1,32 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { Header } from '../components/layout/Header';
 import { PacingSettingsCard } from '../components/settings/PacingSettingsCard';
 import { Card } from '../components/ui/Card';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useAppData } from '../context/AppDataContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
   exportDataJson,
   importDataJson,
+  readLocalAppDataIfPresent,
   resetToDefault,
 } from '../services/storage';
 import { applyPortfolioSixSeed, type PortfolioSixSeedReport } from '../utils/portfolioSixSeed';
-import { APP_VERSION, STORAGE_KEY } from '../types';
+import { APP_VERSION, STORAGE_KEY, type AppData } from '../types';
 
 export function SettingsPage() {
-  const { data, replaceData, updateData } = useAppData();
+  const { data, replaceData, updateData, persistence, reloadFromServer } = useAppData();
+  const auth = useAuth();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [seedSixOpen, setSeedSixOpen] = useState(false);
+  const [importConfirmOpen, setImportConfirmOpen] = useState(false);
+  const [importPending, setImportPending] = useState<AppData | null>(null);
+  const [uploadLocalOpen, setUploadLocalOpen] = useState(false);
+
+  const localPeek = persistence === 'server' ? readLocalAppDataIfPresent() : null;
 
   const handleSeedSixPack = () => {
     let report!: PortfolioSixSeedReport;
@@ -45,15 +53,20 @@ export function SettingsPage() {
     toast('Backup downloaded');
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const imported = importDataJson(reader.result as string);
-        replaceData(imported);
-        toast('Backup imported successfully');
+        if (persistence === 'server') {
+          setImportPending(imported);
+          setImportConfirmOpen(true);
+        } else {
+          replaceData(imported);
+          toast('Backup imported successfully');
+        }
       } catch (err) {
         toast(err instanceof Error ? err.message : 'Import failed', 'error');
       }
@@ -62,11 +75,50 @@ export function SettingsPage() {
     reader.readAsText(file);
   };
 
-  const handleReset = () => {
-    const fresh = resetToDefault();
-    replaceData(fresh);
-    toast('App reset to default data');
-    setResetOpen(false);
+  const confirmImport = () => {
+    if (importPending) {
+      replaceData(importPending);
+      toast('Backup imported to server');
+    }
+    setImportPending(null);
+    setImportConfirmOpen(false);
+  };
+
+  const handleReset = async () => {
+    try {
+      if (persistence === 'server') {
+        const r = await fetch('/api/app-data/reset', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (!r.ok) {
+          const t = await r.text();
+          toast(t || `Reset failed (${r.status})`, 'error');
+          return;
+        }
+        await reloadFromServer();
+        toast('Server data reset to defaults');
+      } else {
+        replaceData(resetToDefault());
+        toast('App reset to default data');
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Reset failed', 'error');
+    } finally {
+      setResetOpen(false);
+    }
+  };
+
+  const confirmUploadLocal = () => {
+    const local = readLocalAppDataIfPresent();
+    if (!local) {
+      toast('No valid local data found in this browser', 'error');
+      setUploadLocalOpen(false);
+      return;
+    }
+    replaceData(local);
+    toast('Local snapshot uploaded to server');
+    setUploadLocalOpen(false);
   };
 
   const counts = {
@@ -84,6 +136,23 @@ export function SettingsPage() {
     <div className="mx-auto max-w-2xl">
       <Header title="Settings" subtitle="Pacing date, backup, restore, and app info" />
 
+      {auth.enabled && auth.status === 'authenticated' && (
+        <Card className="mb-6">
+          <h2 className="text-sm font-semibold text-slate-900">Account</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Signed in as <strong>{auth.username}</strong>. Data is loaded from the server on this
+            device.
+          </p>
+          <button
+            type="button"
+            onClick={() => void auth.logout()}
+            className="mt-4 rounded-lg border border-border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Sign out
+          </button>
+        </Card>
+      )}
+
       <PacingSettingsCard
         settings={data.settings}
         onChange={(settings) => updateData((prev) => ({ ...prev, settings }))}
@@ -94,14 +163,30 @@ export function SettingsPage() {
         <p className="mt-2 text-sm text-slate-600">
           <strong>Master Portfolio Command Center</strong> — {APP_VERSION}
         </p>
-        <p className="mt-2 text-sm text-slate-500">
-          All data is stored locally in your browser. Nothing is sent to a server. No login
-          required.
-        </p>
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Warning: Clearing browser data for this site will erase your app data. Export
-          backups regularly.
-        </p>
+        {persistence === 'server' ? (
+          <>
+            <p className="mt-2 text-sm text-slate-500">
+              You are using <strong>server-backed storage</strong>. Changes sync to the database;
+              refresh or another device shows the same projects, tasks, reviews, and contacts.
+            </p>
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              This browser may still contain an older <strong>localStorage</strong> copy from before
+              server mode—it is not used as the source of truth unless you explicitly upload it
+              below.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-slate-500">
+              All data is stored locally in your browser. Nothing is sent to a server. No login
+              required.
+            </p>
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Warning: Clearing browser data for this site will erase your app data. Export backups
+              regularly.
+            </p>
+          </>
+        )}
       </Card>
 
       <Card className="mb-6">
@@ -115,9 +200,32 @@ export function SettingsPage() {
           ))}
         </dl>
         <p className="mt-3 text-xs text-slate-400">
-          Storage key: <code className="rounded bg-slate-100 px-1">{STORAGE_KEY}</code>
+          Local storage key (legacy / backup):{' '}
+          <code className="rounded bg-slate-100 px-1">{STORAGE_KEY}</code>
         </p>
       </Card>
+
+      {persistence === 'server' && (
+        <Card className="mb-6 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-900">One-time: promote local snapshot</h2>
+          <p className="text-sm text-slate-500">
+            If this browser still has portfolio data in localStorage from before server login, you
+            can push it to the server once. This <strong>replaces</strong> the server copy—export a
+            server backup first if unsure.
+          </p>
+          {localPeek ? (
+            <button
+              type="button"
+              onClick={() => setUploadLocalOpen(true)}
+              className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-950 hover:bg-amber-100"
+            >
+              Upload this device’s local data to server…
+            </button>
+          ) : (
+            <p className="text-sm text-slate-400">No valid local snapshot found in this browser.</p>
+          )}
+        </Card>
+      )}
 
       <Card className="mb-6 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900">Portfolio six-pack (projects + tasks)</h2>
@@ -139,8 +247,10 @@ export function SettingsPage() {
       <Card className="mb-6 space-y-4">
         <h2 className="text-sm font-semibold text-slate-900">Backup & restore</h2>
         <p className="text-sm text-slate-500">
-          Export all projects, tasks, contacts, content, finance, reviews, and more as a
-          JSON file. Import a previous backup to restore.
+          Export all projects, tasks, contacts, content, finance, reviews, and more as a JSON file.
+          {persistence === 'server'
+            ? ' Import replaces the server copy after you confirm.'
+            : ' Import a previous backup to restore.'}
         </p>
         <div className="flex flex-wrap gap-3">
           <button
@@ -162,7 +272,7 @@ export function SettingsPage() {
             type="file"
             accept="application/json,.json"
             className="hidden"
-            onChange={handleImport}
+            onChange={handleImportFile}
           />
         </div>
       </Card>
@@ -170,8 +280,9 @@ export function SettingsPage() {
       <Card className="border-red-100 bg-red-50/30">
         <h2 className="text-sm font-semibold text-red-900">Danger zone</h2>
         <p className="mt-2 text-sm text-red-800/80">
-          Reset the app to default seed data. This removes all your custom entries and
-          cannot be undone unless you have a backup.
+          {persistence === 'server'
+            ? 'Reset the server copy to default seed data. Other devices will see the same reset. Export a backup first.'
+            : 'Reset the app to default seed data. This removes all your custom entries and cannot be undone unless you have a backup.'}
         </p>
         <button
           type="button"
@@ -195,10 +306,37 @@ export function SettingsPage() {
       <ConfirmDialog
         open={resetOpen}
         title="Reset all data?"
-        message="This will replace everything with default projects, tasks, and prompts. Your custom data will be lost."
+        message={
+          persistence === 'server'
+            ? 'This resets the database copy to default projects, tasks, and prompts. All signed-in devices will see the change.'
+            : 'This will replace everything with default projects, tasks, and prompts. Your custom data will be lost.'
+        }
         confirmLabel="Reset everything"
-        onConfirm={handleReset}
+        onConfirm={() => void handleReset()}
         onCancel={() => setResetOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={importConfirmOpen}
+        title="Replace server data with this backup?"
+        message="Importing will overwrite the current server snapshot with the JSON file you selected. Export the server first if you need a rollback."
+        confirmLabel="Import and overwrite server"
+        danger
+        onConfirm={confirmImport}
+        onCancel={() => {
+          setImportPending(null);
+          setImportConfirmOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={uploadLocalOpen}
+        title="Overwrite server with this browser’s localStorage?"
+        message="The server copy will be replaced by the normalized data found in this browser’s local storage key. This cannot be undone except by restoring a JSON export."
+        confirmLabel="Upload to server"
+        danger
+        onConfirm={confirmUploadLocal}
+        onCancel={() => setUploadLocalOpen(false)}
       />
     </div>
   );

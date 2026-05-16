@@ -2,7 +2,7 @@
 
 Local-first command center for portfolio projects and **insurance execution** (PA, MDRT, recruitment).
 
-**Version:** v1.0 local-first · **Data version:** 7
+**Version:** v1.0 · **Data version:** 11
 
 ## Setup
 
@@ -10,6 +10,8 @@ Local-first command center for portfolio projects and **insurance execution** (P
 npm install
 npm run dev
 ```
+
+Optional **server + login** (Postgres on Vercel): set **`VITE_AUTH_ENABLED=true`** for the build and configure env vars per [SERVER_STORAGE_SETUP.md](./SERVER_STORAGE_SETUP.md). For a combined local API + UI, use `npm run dev:vercel`, or run `vercel dev` and point Vite at it with `API_PROXY_TARGET=http://127.0.0.1:3000 npm run dev`.
 
 Open http://localhost:5173 (or the URL shown in the terminal).
 
@@ -23,17 +25,15 @@ npm run preview
 - In the Vercel project, set **Root Directory** to this repo root (same folder as `vercel.json`, **not** a parent monorepo folder unless that folder contains this file).
 - Point **Production Branch** at the branch you push (e.g. `main`).
 - `vercel.json` pins **`buildCommand`** (`npm run build`) and **`outputDirectory`** (`dist`) so production always serves the Vite build even if dashboard defaults drift.
-- SPA **`rewrites`** send unknown paths to **`/index.html`** so deep links like `/today`, `/tasks`, `/pa`, and `/mdrt` load the app.
+- SPA **`rewrites`** send non-API paths to **`/index.html`** so deep links like `/today`, `/tasks`, `/pa`, and `/mdrt` load the app while **`/api/*`** stays on serverless functions.
 
 ## Where data is stored
 
-All data is saved in your browser **localStorage** under:
+**Default (no env flag):** data stays in browser **localStorage** under `master-portfolio-command-center`. Nothing is sent to a server; no login.
 
-`master-portfolio-command-center`
+**Optional server mode:** set **`VITE_AUTH_ENABLED=true`** at build time and configure Postgres + auth env vars on Vercel. Then the app shows a login screen and persists the full **`AppData`** JSON on the server. See **[SERVER_STORAGE_SETUP.md](./SERVER_STORAGE_SETUP.md)** for variables, SQL, password hashing, and local dev (`vercel dev` or `API_PROXY_TARGET` + `npm run dev`).
 
-Nothing is sent to a server. No login required.
-
-**Warning:** Clearing browser data for this site will erase your app data.
+**Warning:** In local-only mode, clearing site data erases the app. In server mode, export backups from Settings when making large changes.
 
 ## Backup and restore
 
@@ -99,4 +99,4 @@ Deep links:
 - React 19 + TypeScript + Vite
 - Tailwind CSS v4
 - react-router-dom
-- localStorage persistence
+- localStorage persistence (default) or Vercel serverless `/api` + Postgres when auth is enabled
