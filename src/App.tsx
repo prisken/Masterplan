@@ -32,6 +32,8 @@ export default function App() {
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/advisor" element={<AdvisorPage />} />
+              <Route path="/pa" element={<AdvisorPage />} />
+              <Route path="/mdrt" element={<AdvisorPage />} />
               <Route path="/contacts" element={<ContactsPage />} />
               <Route path="/content" element={<ContentPage />} />
               <Route path="/events" element={<EventsPage />} />

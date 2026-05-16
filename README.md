@@ -18,6 +18,13 @@ npm run build
 npm run preview
 ```
 
+## Vercel deployment
+
+- In the Vercel project, set **Root Directory** to this repo root (same folder as `vercel.json`, **not** a parent monorepo folder unless that folder contains this file).
+- Point **Production Branch** at the branch you push (e.g. `main`).
+- `vercel.json` pins **`buildCommand`** (`npm run build`) and **`outputDirectory`** (`dist`) so production always serves the Vite build even if dashboard defaults drift.
+- SPA **`rewrites`** send unknown paths to **`/index.html`** so deep links like `/today`, `/tasks`, `/pa`, and `/mdrt` load the app.
+
 ## Where data is stored
 
 All data is saved in your browser **localStorage** under:
