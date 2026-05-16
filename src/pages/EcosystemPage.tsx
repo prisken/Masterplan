@@ -27,7 +27,7 @@ const engines: {
   },
   {
     id: 'hksi-papers',
-    name: 'HKSI Paper 1, 7, 8',
+    name: 'HKSI Papers 1–9',
     category: 'Credibility',
     engine: 'Credibility Engine',
     role: 'Strengthens professional credibility for finance-related content.',

@@ -5,38 +5,19 @@ import { defaultAiPrompts } from './defaultPrompts';
 import { emptyAdvisorExecution, emptyAppSettings } from '../utils/defaults';
 import { migrateTask } from '../utils/taskMigrate';
 
-const defaultHksiExams: HksiExam[] = [
-  {
-    id: 'hksi-paper-1',
-    paper: 'Paper 1',
-    targetExamDate: '',
-    status: 'Studying',
-    studyProgress: 0,
-    mockScore: 0,
-    weakTopics: '',
-    notes: '',
-  },
-  {
-    id: 'hksi-paper-7',
-    paper: 'Paper 7',
-    targetExamDate: '',
-    status: 'Not Started',
-    studyProgress: 0,
-    mockScore: 0,
-    weakTopics: '',
-    notes: '',
-  },
-  {
-    id: 'hksi-paper-8',
-    paper: 'Paper 8',
-    targetExamDate: '',
-    status: 'Not Started',
-    studyProgress: 0,
-    mockScore: 0,
-    weakTopics: '',
-    notes: '',
-  },
-];
+const HKSI_PAPER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+/** Canonical HKSI exam rows (merged with saved data by `paper` label). */
+export const defaultHksiExams: HksiExam[] = HKSI_PAPER_NUMBERS.map((n) => ({
+  id: `hksi-paper-${n}`,
+  paper: `Paper ${n}`,
+  targetExamDate: '',
+  status: n === 1 ? 'Studying' : ('Not Started' as const),
+  studyProgress: 0,
+  mockScore: 0,
+  weakTopics: '',
+  notes: '',
+}));
 
 export const defaultProjects: Project[] = [
   {
@@ -104,12 +85,12 @@ export const defaultProjects: Project[] = [
   },
   {
     id: 'hksi-papers',
-    projectName: 'HKSI Paper 1, 7, 8',
+    projectName: 'HKSI Papers 1–9',
     category: 'Credibility',
     engine: 'Credibility Engine',
     status: 'Building',
     priority: 'High',
-    mainGoal: 'Complete HKSI Paper 1, 7, and 8',
+    mainGoal: 'Complete HKSI Papers 1 through 9',
     targetAudience: 'Professional development',
     mainFeeling: 'Disciplined, credible, professional',
     mainMotive: 'Licensing and financial credibility',

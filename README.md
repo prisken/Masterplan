@@ -84,7 +84,7 @@ Deep links:
 - 6 projects (5 portfolio + **Advisor Growth Center**)
 - ~170 tasks (~124 advisor execution + ~46 portfolio)
 - **Advisor trackers** (PA metrics, MDRT production, recruitment funnel) in `advisor` on `AppData`
-- 3 HKSI exam trackers (Papers 1, 7, 8)
+- 9 HKSI exam trackers (Papers 1–9)
 - 5 AI prompt templates
 
 ## Tech stack

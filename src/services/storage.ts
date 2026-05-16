@@ -1,5 +1,5 @@
-import { createDefaultData } from '../data/seedData';
-import type { AppData, Task } from '../types';
+import { createDefaultData, defaultHksiExams } from '../data/seedData';
+import type { AppData, HksiExam, Task } from '../types';
 import { DATA_VERSION, REFERENCE_DATE, STORAGE_KEY } from '../types';
 import type { AppSettings } from '../types';
 import { emptyAdvisorExecution, emptyAppSettings } from '../utils/defaults';
@@ -10,11 +10,37 @@ import {
   migrateDailyEntries,
 } from './dataMigrations';
 
+/** Ensures Papers 1–9 exist; preserves saved rows by `paper`; keeps custom papers not in the seed list. */
+function mergeHksiExams(saved: HksiExam[] | undefined): HksiExam[] {
+  const canonicalSeed = defaultHksiExams.map((e) => ({ ...e }));
+  const seedPaperLabels = new Set(canonicalSeed.map((s) => s.paper));
+  const byPaper = new Map<string, HksiExam>();
+  for (const e of saved ?? []) {
+    byPaper.set(e.paper, { ...e });
+  }
+  const merged = canonicalSeed.map((s) => {
+    const existing = byPaper.get(s.paper);
+    return existing ? { ...s, ...existing } : { ...s };
+  });
+  const extras = (saved ?? []).filter((e) => !seedPaperLabels.has(e.paper));
+  return [...merged, ...extras.map((e) => ({ ...e }))];
+}
+
 function normalizeData(parsed: Partial<AppData>): AppData {
   const defaults = createDefaultData();
   const projects = mergeAdvisorProject(
     parsed.projects?.length ? parsed.projects.map((p) => ({ ...p })) : defaults.projects
-  );
+  ).map((p) => {
+    if (p.id !== 'hksi-papers') return p;
+    if (p.projectName === 'HKSI Paper 1, 7, 8' || p.mainGoal === 'Complete HKSI Paper 1, 7, and 8') {
+      return {
+        ...p,
+        projectName: 'HKSI Papers 1–9',
+        mainGoal: 'Complete HKSI Papers 1 through 9',
+      };
+    }
+    return p;
+  });
   const tasks = mergeAdvisorTasks(
     parsed.tasks?.length ? (parsed.tasks as Task[]) : defaults.tasks
   );
@@ -55,7 +81,7 @@ function normalizeData(parsed: Partial<AppData>): AppData {
     content: parsed.content ?? [],
     events: parsed.events ?? [],
     finance: parsed.finance ?? [],
-    hksiExams: parsed.hksiExams?.length ? parsed.hksiExams : defaults.hksiExams,
+    hksiExams: mergeHksiExams(parsed.hksiExams),
     studyLogs: parsed.studyLogs ?? [],
     wrongAnswers: parsed.wrongAnswers ?? [],
     dailyEntries: parsed.dailyEntries?.length

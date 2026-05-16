@@ -132,7 +132,7 @@ export function HksiPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <Header
           title="HKSI Study Dashboard"
-          subtitle="Track Papers 1, 7, and 8 — exams, study logs, and wrong answers"
+          subtitle="Track Papers 1–9 — exams, study logs, and wrong answers"
         />
         <PageActions
           onAdd={openAdd}
